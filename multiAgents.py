@@ -12,7 +12,7 @@ class ReflexAgent(Agent):
     headers.
     """
     def __init__(self, *args, **kwargs) -> None:
-        self.index = 0 # your agent always has index 0
+        self.index = 0  # your agent always has index 0
 
     def getAction(self, gameState):
         """
@@ -29,7 +29,7 @@ class ReflexAgent(Agent):
         scores = [self.evaluationFunction(gameState, action) for action in legalMoves]
         bestScore = max(scores)
         bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
-        chosenIndex = random.choice(bestIndices) # Pick randomly among the best
+        chosenIndex = random.choice(bestIndices)  # Pick randomly among the best
 
         "Add more of your code here if you want to"
 
@@ -60,7 +60,7 @@ class MultiAgentSearchAgent(Agent):
     """
     This class provides some common elements to all of your
     multi-agent searchers.  Any methods defined here will be available
-    to the MinimaxAgent, AlphaBetaAgent & ExpectimaxAgent.
+    to the MinimaxAgent, AlphaBetaAgent & ExpectiMaxAgent.
 
     You *do not* need to make any changes here, but you can if you want to
     add functionality to all your adversarial search agents.  Please do not
@@ -72,14 +72,15 @@ class MultiAgentSearchAgent(Agent):
     """
 
     def __init__(self, evalFn = 'scoreEvaluationFunction', depth = '2', **kwargs):
-        self.index = 0 # your agent always has index 0
+        self.index = 0  # your agent always has index 0
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
 
 
 class MinimaxAgent(MultiAgentSearchAgent):
     """
-    Your minimax agent which extends MultiAgentSearchAgent and is supposed to be implementing a minimax tree with a certain depth.
+    Your minimax agent which extends MultiAgentSearchAgent and is supposed to be implementing a minimax tree with a
+    certain depth.
     """
 
     def __init__(self, *args, **kwargs) -> None:
@@ -98,7 +99,27 @@ class MinimaxAgent(MultiAgentSearchAgent):
         self.evaluationFunction(gameState) -> float
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        legal_moves = state.getLegalActions(self.index)
+
+        min_layer_outputs = []
+        for a in legal_moves:
+            new_game_state = state.generateSuccessor(self.index, a)
+
+            for i in range(1, new_game_state.getNumAgents()):
+                opponent_legal_actions = new_game_state.getLegalActions(i)
+                scores = [new_game_state.generateSuccessor(i, action).getScore(self.index) for action in opponent_legal_actions]
+                worst_score = min(scores)
+                worst_indices = [index for index in range(len(scores)) if scores[index] == worst_score]
+                chosen_index = (i, opponent_legal_actions[random.choice(worst_indices)], worst_score)  # opponent
+                # chooses the action that leads to the least point for our agent
+                min_layer_outputs.append((chosen_index[2], chosen_index[0], chosen_index[1], a))  # our point,
+                # opponent index, opponent action, our agent action
+
+        best_score = max(min_layer_outputs)
+        chosen_indices = [index for index in range(len(min_layer_outputs)) if min_layer_outputs[index][0] == best_score]
+        final_index = random.choice(chosen_indices)
+
+        return legal_moves[final_index]
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
