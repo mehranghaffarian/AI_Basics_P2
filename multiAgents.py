@@ -4,6 +4,7 @@ from Agents import Agent
 import util
 import random
 
+
 class ReflexAgent(Agent):
     """
     A reflex agent chooses an action at each choice point by examining
@@ -13,6 +14,7 @@ class ReflexAgent(Agent):
     it in any way you see fit, so long as you don't touch our method
     headers.
     """
+
     def __init__(self, *args, **kwargs) -> None:
         self.index = 0  # your agent always has index 0
 
@@ -73,7 +75,7 @@ class MultiAgentSearchAgent(Agent):
     is another abstract class.
     """
 
-    def __init__(self, evalFn = 'scoreEvaluationFunction', depth = '2', **kwargs):
+    def __init__(self, evalFn='scoreEvaluationFunction', depth='2', **kwargs):
         self.index = 0  # your agent always has index 0
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
@@ -101,27 +103,16 @@ class MinimaxAgent(MultiAgentSearchAgent):
         self.evaluationFunction(gameState) -> float
         """
         "*** YOUR CODE HERE ***"
-        legal_moves = state.getLegalActions(self.index)
+        depth_count = 0
+        final_index = None
+        current_state = state
+        legal_moves = None
+        game_sequences = []
 
-        min_layer_outputs = []
-        for a in legal_moves:
-            new_game_state = state.generateSuccessor(self.index, a)
+        while depth_count < self.depth:
+            depth_count += 1
 
-            for i in range(1, new_game_state.getNumAgents()):
-                opponent_legal_actions = new_game_state.getLegalActions(i)
-                scores = [new_game_state.generateSuccessor(i, action).getScore(self.index) for action in opponent_legal_actions]
-                worst_score = min(scores)
-                worst_indices = [index for index in range(len(scores)) if scores[index] == worst_score]
-                chosen_index = (i, opponent_legal_actions[random.choice(worst_indices)], worst_score)  # opponent
-                # chooses the action that leads to the least point for our agent
-                min_layer_outputs.append((chosen_index[2], chosen_index[0], chosen_index[1], a))  # our point,
-                # opponent index, opponent action, our agent action
-
-        best_score = max([e[0] for e in min_layer_outputs])
-        chosen_indices = [index for index in range(len(min_layer_outputs)) if min_layer_outputs[index][0] == best_score]
-        final_index = random.choice(chosen_indices)
-
-        return legal_moves[final_index]
+        return None
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -149,7 +140,8 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
             for i in range(1, new_game_state.getNumAgents()):
                 opponent_legal_actions = new_game_state.getLegalActions(i)
-                scores = [new_game_state.generateSuccessor(i, action).getScore(self.index) for action in opponent_legal_actions]
+                scores = [new_game_state.generateSuccessor(i, action).getScore(self.index) for action in
+                          opponent_legal_actions]
                 worst_score = min(scores)
                 worst_indices = [index for index in range(len(scores)) if scores[index] == worst_score]
                 chosen_index = (i, opponent_legal_actions[random.choice(worst_indices)], worst_score)  # opponent
@@ -158,8 +150,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 # opponent index, opponent action, our agent action
 
         best_score = max([e[0] for e in min_layer_outputs])
-        chosen_indices = [index for index in range(len(min_layer_outputs)) if min_layer_outputs[index][0] == best_score]
-        final_index = random.choice(chosen_indices)
+        final_index = get_target_index([e[0] for e in min_layer_outputs], best_score)
 
         return legal_moves[final_index]
 
@@ -201,7 +192,7 @@ def betterEvaluationFunction(currentGameState):
     gameState.getScore(index) -> int
 
     """
-    
+
     "*** YOUR CODE HERE ***"
 
     # parity
@@ -211,8 +202,26 @@ def betterEvaluationFunction(currentGameState):
     # mobility
 
     # stability
-    
+
     util.raiseNotDefined()
+
 
 # Abbreviation
 better = betterEvaluationFunction
+
+
+###########################################
+### My own utils ###
+###########################################
+
+def get_target_index(elements, target):
+    indices = [i for i in range(len(elements)) if elements[i] == target]
+    return elements[random.choice(indices)]
+
+
+class GameSequence:
+    def __init__(self, actions, final_game_state, final_point, *args, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.actions = actions
+        self.final_game_state = final_game_state
+        self.final_point = final_point
