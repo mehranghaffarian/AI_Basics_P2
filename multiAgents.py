@@ -1,3 +1,5 @@
+import sys
+
 from Agents import Agent
 import util
 import random
@@ -115,7 +117,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
                 min_layer_outputs.append((chosen_index[2], chosen_index[0], chosen_index[1], a))  # our point,
                 # opponent index, opponent action, our agent action
 
-        best_score = max(min_layer_outputs)
+        best_score = max([e[0] for e in min_layer_outputs])
         chosen_indices = [index for index in range(len(min_layer_outputs)) if min_layer_outputs[index][0] == best_score]
         final_index = random.choice(chosen_indices)
 
@@ -137,8 +139,30 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         You should keep track of alpha and beta in each node to be able to implement alpha-beta pruning.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
-        
+        alpha = -64
+        beta = 64
+        legal_moves = gameState.getLegalActions(self.index)
+
+        min_layer_outputs = []
+        for a in legal_moves:
+            new_game_state = gameState.generateSuccessor(self.index, a)
+
+            for i in range(1, new_game_state.getNumAgents()):
+                opponent_legal_actions = new_game_state.getLegalActions(i)
+                scores = [new_game_state.generateSuccessor(i, action).getScore(self.index) for action in opponent_legal_actions]
+                worst_score = min(scores)
+                worst_indices = [index for index in range(len(scores)) if scores[index] == worst_score]
+                chosen_index = (i, opponent_legal_actions[random.choice(worst_indices)], worst_score)  # opponent
+                # chooses the action that leads to the least point for our agent
+                min_layer_outputs.append((chosen_index[2], chosen_index[0], chosen_index[1], a))  # our point,
+                # opponent index, opponent action, our agent action
+
+        best_score = max([e[0] for e in min_layer_outputs])
+        chosen_indices = [index for index in range(len(min_layer_outputs)) if min_layer_outputs[index][0] == best_score]
+        final_index = random.choice(chosen_indices)
+
+        return legal_moves[final_index]
+
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
