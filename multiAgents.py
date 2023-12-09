@@ -1,8 +1,8 @@
-import sys
-
-from Agents import Agent
-import util
 import random
+
+import util
+from Agents import Agent
+from bigtree import Node
 
 
 class ReflexAgent(Agent):
@@ -104,13 +104,34 @@ class MinimaxAgent(MultiAgentSearchAgent):
         """
         "*** YOUR CODE HERE ***"
         depth_count = 0
-        final_index = None
-        current_state = state
-        legal_moves = None
-        game_sequences = []
+        game_sequences = [[GameSequence([], state, self.evaluationFunction(state))]]
 
         while depth_count < self.depth:
             depth_count += 1
+            agent_index = depth_count % state.getNumAgents()
+            new_depth_game_sequences = []
+
+            for group_sequences in game_sequences:
+                for gs in group_sequences:
+                    new_sequences = []
+                    for a in state.getLegalActions(agent_index):
+                        actions = gs.actions.copy()
+                        actions.append((agent_index, a))
+                        new_state = gs.final_game_state.generateSuccessor(agent_index, a)
+                        new_sequences.append(GameSequence(actions, new_state, self.evaluationFunction(new_state)))
+
+                    new_depth_game_sequences.append(new_sequences)
+
+        while depth_count > 0:
+            depth_count -= 1
+            for group_Sequences in game_sequences:
+                if group_Sequences[0].actions[0] == 0:
+                    points = [gs.final_point for gs in group_Sequences]
+                    chosen_index = get_target_index(points, max(points))
+                else:
+                    points = [gs.final_point for gs in group_Sequences]
+                    chosen_index = get_target_index(points, min(points))
+
 
         return None
 
