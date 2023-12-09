@@ -108,19 +108,21 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
         while depth_count < self.depth:
             new_leaves = []
+
             for n in leaves:
                 gs = n.value
                 current_state = gs.final_game_state
                 agent_index = depth_count % current_state.getNumAgents()
+
                 for a in current_state.getLegalActions(agent_index):
                     new_state = current_state.generateSuccessor(agent_index, a)
                     new_actions = gs.actions.copy()
                     new_actions.append((agent_index, a))
-                    leaf = Node(parent=n, value=GameSequence(new_actions, new_state, self.evaluationFunction(new_state)))
+                    leaf = Node(parent=n, value=GameSequence(new_actions,
+                                                             new_state, self.evaluationFunction(new_state)))
                     new_leaves.append(leaf)
-                    n.children.append(leaf)
-            leaves = new_leaves
 
+            leaves = new_leaves
             depth_count += 1
 
         while depth_count > 0:
@@ -142,8 +144,10 @@ class MinimaxAgent(MultiAgentSearchAgent):
                             target = m
                         elif not is_max_node and m.value.final_point < target_point:
                             target_point = m
-                target.parent = n.parent.parent
-                new_leaves.append(target)
+
+                new_leaves.append(Node(parent=n.parent.parent,
+                                       value=GameSequence(target.value.actions.copy(), target.value.final_game_state,
+                                                          target.value.final_point)))
             leaves = new_leaves
 
         return leaves[0].value.actions[0][1]
@@ -166,27 +170,55 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         "*** YOUR CODE HERE ***"
         alpha = -64
         beta = 64
-        legal_moves = gameState.getLegalActions(self.index)
+        depth_count = 0
+        root = Node(value=GameSequence([], gameState, self.evaluationFunction(gameState)))
+        leaves = [root]
 
-        min_layer_outputs = []
-        for a in legal_moves:
-            new_game_state = gameState.generateSuccessor(self.index, a)
+        while depth_count < self.depth:
+            new_leaves = []
 
-            for i in range(1, new_game_state.getNumAgents()):
-                opponent_legal_actions = new_game_state.getLegalActions(i)
-                scores = [new_game_state.generateSuccessor(i, action).getScore(self.index) for action in
-                          opponent_legal_actions]
-                worst_score = min(scores)
-                worst_indices = [index for index in range(len(scores)) if scores[index] == worst_score]
-                chosen_index = (i, opponent_legal_actions[random.choice(worst_indices)], worst_score)  # opponent
-                # chooses the action that leads to the least point for our agent
-                min_layer_outputs.append((chosen_index[2], chosen_index[0], chosen_index[1], a))  # our point,
-                # opponent index, opponent action, our agent action
+            for n in leaves:
+                gs = n.value
+                current_state = gs.final_game_state
+                agent_index = depth_count % current_state.getNumAgents()
 
-        best_score = max([e[0] for e in min_layer_outputs])
-        final_index = get_target_index([e[0] for e in min_layer_outputs], best_score)
+                for a in current_state.getLegalActions(agent_index):
+                    new_state = current_state.generateSuccessor(agent_index, a)
+                    new_actions = gs.actions.copy()
+                    new_actions.append((agent_index, a))
+                    leaf = Node(parent=n,
+                                value=GameSequence(new_actions, new_state, self.evaluationFunction(new_state)))
+                    new_leaves.append(leaf)
 
-        return legal_moves[final_index]
+            leaves = new_leaves
+            depth_count += 1
+
+        while depth_count > 0:
+            depth_count -= 1
+            new_leaves = []
+
+            for n in leaves:
+                curr_parent = n.parent.value
+
+                if len(curr_parent.actions) == 0:
+                    is_max_node = True
+                else:
+                    is_max_node = curr_parent.actions[0][0] == 0
+                target_point = curr_parent.final_point
+                target = n
+                for m in leaves:
+                    if m.parent == n.parent:
+                        if is_max_node and m.value.final_point > target_point:
+                            target = m
+                        elif not is_max_node and m.value.final_point < target_point:
+                            target_point = m
+
+                new_leaves.append(Node(parent=n.parent.parent,
+                                       value=GameSequence(target.value.actions.copy(), target.value.final_game_state,
+                                                          target.value.final_point)))
+            leaves = new_leaves
+
+        return leaves[0].value.actions[0][1]
 
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
@@ -262,8 +294,7 @@ class GameSequence:
 
 
 class Node:
-    def __init__(self, value, parent=None, children=None, *args, **kwargs) -> None:
+    def __init__(self, value, parent=None, *args, **kwargs) -> None:
         super().__init__(**kwargs)
         self.parent = parent
-        self.children = []
         self.value = value
