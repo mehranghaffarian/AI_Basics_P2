@@ -143,7 +143,9 @@ class MinimaxAgent(MultiAgentSearchAgent):
                         if is_max_node and m.value.final_point > target_point:
                             target = m
                         elif not is_max_node and m.value.final_point < target_point:
-                            target_point = m
+                            target = m
+                    else:
+                        break
 
                 new_leaves.append(Node(parent=n.parent.parent,
                                        value=GameSequence(target.value.actions.copy(), target.value.final_game_state,
@@ -210,8 +212,16 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                     if m.parent == n.parent:
                         if is_max_node and m.value.final_point > target_point:
                             target = m
+                            if target.value.final_point > beta:
+                                break
+                            alpha = max(alpha, target.value.final_point)
                         elif not is_max_node and m.value.final_point < target_point:
-                            target_point = m
+                            target = m
+                            if target.value.final_point < alpha:
+                                break
+                            beta = min(beta, target.value.final_point)
+                    else:
+                        break
 
                 new_leaves.append(Node(parent=n.parent.parent,
                                        value=GameSequence(target.value.actions.copy(), target.value.final_game_state,
