@@ -2,7 +2,6 @@ import random
 
 import util
 from Agents import Agent
-from bigtree import Node
 
 
 class ReflexAgent(Agent):
@@ -104,36 +103,50 @@ class MinimaxAgent(MultiAgentSearchAgent):
         """
         "*** YOUR CODE HERE ***"
         depth_count = 0
-        game_sequences = [[GameSequence([], state, self.evaluationFunction(state))]]
+        root = Node(value=GameSequence([], state, self.evaluationFunction(state)))
+        leaves = [root]
 
         while depth_count < self.depth:
+            new_leaves = []
+            for n in leaves:
+                gs = n.value
+                current_state = gs.final_game_state
+                agent_index = depth_count % current_state.getNumAgents()
+                for a in current_state.getLegalActions(agent_index):
+                    new_state = current_state.generateSuccessor(agent_index, a)
+                    new_actions = gs.actions.copy()
+                    new_actions.append((agent_index, a))
+                    leaf = Node(parent=n, value=GameSequence(new_actions, new_state, self.evaluationFunction(new_state)))
+                    new_leaves.append(leaf)
+                    n.children.append(leaf)
+            leaves = new_leaves
+
             depth_count += 1
-            agent_index = depth_count % state.getNumAgents()
-            new_depth_game_sequences = []
-
-            for group_sequences in game_sequences:
-                for gs in group_sequences:
-                    new_sequences = []
-                    for a in state.getLegalActions(agent_index):
-                        actions = gs.actions.copy()
-                        actions.append((agent_index, a))
-                        new_state = gs.final_game_state.generateSuccessor(agent_index, a)
-                        new_sequences.append(GameSequence(actions, new_state, self.evaluationFunction(new_state)))
-
-                    new_depth_game_sequences.append(new_sequences)
 
         while depth_count > 0:
             depth_count -= 1
-            for group_Sequences in game_sequences:
-                if group_Sequences[0].actions[0] == 0:
-                    points = [gs.final_point for gs in group_Sequences]
-                    chosen_index = get_target_index(points, max(points))
+            new_leaves = []
+
+            for n in leaves:
+                curr_parent = n.parent.value
+
+                if len(curr_parent.actions) == 0:
+                    is_max_node = True
                 else:
-                    points = [gs.final_point for gs in group_Sequences]
-                    chosen_index = get_target_index(points, min(points))
+                    is_max_node = curr_parent.actions[0][0] == 0
+                target_point = curr_parent.final_point
+                target = n
+                for m in leaves:
+                    if m.parent == n.parent:
+                        if is_max_node and m.value.final_point > target_point:
+                            target = m
+                        elif not is_max_node and m.value.final_point < target_point:
+                            target_point = m
+                target.parent = n.parent.parent
+                new_leaves.append(target)
+            leaves = new_leaves
 
-
-        return None
+        return leaves[0].value.actions[0][1]
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -246,3 +259,11 @@ class GameSequence:
         self.actions = actions
         self.final_game_state = final_game_state
         self.final_point = final_point
+
+
+class Node:
+    def __init__(self, value, parent=None, children=None, *args, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.parent = parent
+        self.children = []
+        self.value = value
