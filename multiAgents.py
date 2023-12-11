@@ -147,64 +147,52 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         You should keep track of alpha and beta in each node to be able to implement alpha-beta pruning.
         """
         "*** YOUR CODE HERE ***"
-        alpha = -64
-        beta = 64
-        depth_count = 0
         root = Node(game_sequence=GameSequence([], gameState, self.evaluationFunction(gameState)))
-        leaves = [root]
+        form_tree(root, self)
 
-        while depth_count < self.depth:
-            new_leaves = []
+        def alpha_beta_pruning(curr_root, depth):
+            if len(curr_root.children) == 0:
+                curr_root.value = curr_root.game_sequence.final_point
+                return curr_root
 
-            for n in leaves:
-                gs = n.value
-                current_state = gs.final_game_state
-                agent_index = depth_count % current_state.getNumAgents()
-
-                for a in current_state.getLegalActions(agent_index):
-                    new_state = current_state.generateSuccessor(agent_index, a)
-                    new_actions = gs.actions.copy()
-                    new_actions.append((agent_index, a))
-                    leaf = Node(game_sequence=GameSequence(new_actions, new_state, self.evaluationFunction(new_state)))
-                    new_leaves.append(leaf)
-
-            leaves = new_leaves
-            depth_count += 1
-
-        while depth_count > 0:
-            depth_count -= 1
-            new_leaves = []
-
-            for n in leaves:
-                curr_parent = n.parent.value
-
-                if len(curr_parent.actions) == 0:
-                    is_max_node = True
-                else:
-                    is_max_node = curr_parent.actions[0][0] == 0
-                target_point = curr_parent.final_point
-                target = n
-                for m in leaves:
-                    if m.parent == n.parent:
-                        if is_max_node and m.value.final_point > target_point:
-                            target = m
-                            if target.value.final_point > beta:
-                                break
-                            alpha = max(alpha, target.value.final_point)
-                        elif not is_max_node and m.value.final_point < target_point:
-                            target = m
-                            if target.value.final_point < alpha:
-                                break
-                            beta = min(beta, target.value.final_point)
+            target = curr_root.children[0]
+            for c in curr_root.children:
+                if c.value is None:
+                    if len(c.children) == 0:
+                        c.value = c.game_sequence.final_point
                     else:
-                        break
+                        c.alpha = curr_root.alpha
+                        c.beta = curr_root.beta
+                        c = alpha_beta_pruning(c, depth+1)
+                if target.value is None:
+                    if len(target.children) == 0:
+                        target.value = target.game_sequence.final_point
+                    else:
+                        target.alpha = curr_root.alpha
+                        target.beta = curr_root.beta
+                        target = alpha_beta_pruning(target, depth+1)
+                if depth % gameState.getNumAgents() == 0:
+                    if c.value > target.value:
+                        target = c
+                    if c.value > curr_root.beta:
+                        c.alpha = curr_root.alpha
+                        c.beta = curr_root.beta
+                        return c
+                    curr_root.alpha = max(curr_root.alpha, c.value)
+                else:
+                    if c.value < target.value:
+                        target = c
+                    if c.value > curr_root.alpha:
+                        c.alpha = curr_root.alpha
+                        c.beta = curr_root.beta
+                        return c
+                    curr_root.beta = min(curr_root.beta, c.value)
 
-                new_leaves.append(Node(game_sequence=GameSequence(target.value.actions.copy(),
-                                                                  target.value.final_game_state,
-                                                                  target.value.final_point)))
-            leaves = new_leaves
+            target.alpha = curr_root.alpha
+            target.beta = curr_root.beta
+            return target
 
-        return leaves[0].value.actions[0][1]
+        return alpha_beta_pruning(root, 0).game_sequence.actions[0][1]
 
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
