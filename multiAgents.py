@@ -117,12 +117,12 @@ class MinimaxAgent(MultiAgentSearchAgent):
                     if len(c.children) == 0:
                         c.value = c.game_sequence.final_point
                     else:
-                        c = mini_max(c, depth+1)
+                        c = mini_max(c, depth + 1)
                 if target.value is None:
                     if len(target.children) == 0:
                         target.value = target.game_sequence.final_point
                     else:
-                        target = mini_max(target, depth+1)
+                        target = mini_max(target, depth + 1)
                 if depth % state.getNumAgents() == 0 and c.value > target.value:
                     target = c
                 elif depth % state.getNumAgents() != 0 and c.value < target.value:
@@ -151,6 +151,8 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         form_tree(root, self)
 
         def alpha_beta_pruning(curr_root, depth):
+            if curr_root.alpha > curr_root.beta:
+                return curr_root
             if len(curr_root.children) == 0:
                 curr_root.value = curr_root.game_sequence.final_point
                 return curr_root
@@ -163,14 +165,14 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                     else:
                         c.alpha = curr_root.alpha
                         c.beta = curr_root.beta
-                        c = alpha_beta_pruning(c, depth+1)
+                        c = alpha_beta_pruning(c, depth + 1)
                 if target.value is None:
                     if len(target.children) == 0:
                         target.value = target.game_sequence.final_point
                     else:
                         target.alpha = curr_root.alpha
                         target.beta = curr_root.beta
-                        target = alpha_beta_pruning(target, depth+1)
+                        target = alpha_beta_pruning(target, depth + 1)
                 if depth % gameState.getNumAgents() == 0:
                     if c.value > target.value:
                         target = c
@@ -217,8 +219,27 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
         def expectimax(curr_root, depth):
             if len(curr_root.children) == 0:
+                curr_root.value = curr_root.game_sequence.final_point
                 return curr_root
-            return expectimax(random.choice(curr_root.children), depth+1)
+
+            if depth % gameState.getNumAgents() != 0:
+                return random.choice([expectimax(c, depth+1) for c in curr_root.children])  # enemies select action
+                # randomly
+            target = curr_root.children[0]
+            for c in curr_root.children:
+                if c.value is None:
+                    if len(c.children) == 0:
+                        c.value = c.game_sequence.final_point
+                    else:
+                        c = expectimax(c, depth + 1)
+                if target.value is None:
+                    if len(target.children) == 0:
+                        target.value = target.game_sequence.final_point
+                    else:
+                        target = expectimax(target, depth + 1)
+                if c.value > target.value:
+                    target = c
+            return target
 
         return expectimax(root, 0).game_sequence.actions[0][1]
 
@@ -247,14 +268,14 @@ def betterEvaluationFunction(currentGameState):
     # parity
     min_coins = min(currentGameState.getScore())
     max_coins = max(currentGameState.getScore())
-    parity = 100 * (max_coins - min_coins)/(max_coins + min_coins)
+    parity = 100 * (max_coins - min_coins) / (max_coins + min_coins)
     # mobility
     max_mobility = max([len(currentGameState.getLegalActions(i)) for i in range(currentGameState.getNumAgents())])
     min_mobility = min([len(currentGameState.getLegalActions(i)) for i in range(currentGameState.getNumAgents())])
     if max_mobility + min_mobility == 0:
-       mobility = 0
+        mobility = 0
     else:
-        mobility = 100 * (max_mobility - min_mobility)/(max_mobility + min_mobility)
+        mobility = 100 * (max_mobility - min_mobility) / (max_mobility + min_mobility)
     # corners
     corners = currentGameState.getCorners()
     corners_counts = [0] * currentGameState.getNumAgents()
@@ -275,7 +296,7 @@ def betterEvaluationFunction(currentGameState):
     if max_corner_count + min_corner_count == 0:
         corners_heuristic = 0
     else:
-        corners_heuristic = 100 * (max_corner_count - min_corner_count)/(max_corner_count+min_corner_count)
+        corners_heuristic = 100 * (max_corner_count - min_corner_count) / (max_corner_count + min_corner_count)
     # stability
     stability = corners_counts[0] * 3
     stability += currentGameState.getScore(0)
