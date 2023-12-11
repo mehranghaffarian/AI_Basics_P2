@@ -102,57 +102,34 @@ class MinimaxAgent(MultiAgentSearchAgent):
         self.evaluationFunction(gameState) -> float
         """
         "*** YOUR CODE HERE ***"
-        depth_count = 0
-        root = Node(value=GameSequence([], state, self.evaluationFunction(state)))
-        leaves = [root]
+        root = Node(game_sequence=GameSequence([], state, self.evaluationFunction(state)))
 
-        while depth_count < self.depth:
-            new_leaves = []
+        form_tree(root, self)
 
-            for n in leaves:
-                gs = n.value
-                current_state = gs.final_game_state
-                agent_index = depth_count % current_state.getNumAgents()
+        def mini_max(curr_root, depth):
+            if len(curr_root.children) == 0:
+                curr_root.value = curr_root.game_sequence.final_point
+                return curr_root
 
-                for a in current_state.getLegalActions(agent_index):
-                    new_state = current_state.generateSuccessor(agent_index, a)
-                    new_actions = gs.actions.copy()
-                    new_actions.append((agent_index, a))
-                    leaf = Node(parent=n, value=GameSequence(new_actions,
-                                                             new_state, self.evaluationFunction(new_state)))
-                    new_leaves.append(leaf)
-
-            leaves = new_leaves
-            depth_count += 1
-
-        while depth_count > 0:
-            depth_count -= 1
-            new_leaves = []
-
-            for n in leaves:
-                curr_parent = n.parent.value
-
-                if len(curr_parent.actions) == 0:
-                    is_max_node = True
-                else:
-                    is_max_node = curr_parent.actions[0][0] == 0
-                target_point = curr_parent.final_point
-                target = n
-                for m in leaves:
-                    if m.parent == n.parent:
-                        if is_max_node and m.value.final_point > target_point:
-                            target = m
-                        elif not is_max_node and m.value.final_point < target_point:
-                            target = m
+            target = curr_root.children[0]
+            for c in curr_root.children:
+                if c.value is None:
+                    if len(c.children) == 0:
+                        c.value = c.game_sequence.final_point
                     else:
-                        break
+                        c = mini_max(c, depth+1)
+                if target.value is None:
+                    if len(target.children) == 0:
+                        target.value = target.game_sequence.final_point
+                    else:
+                        target = mini_max(target, depth+1)
+                if depth % state.getNumAgents() == 0 and c.value > target.value:
+                    target = c
+                elif depth % state.getNumAgents() != 0 and c.value < target.value:
+                    target = c
+            return target
 
-                new_leaves.append(Node(parent=n.parent.parent,
-                                       value=GameSequence(target.value.actions.copy(), target.value.final_game_state,
-                                                          target.value.final_point)))
-            leaves = new_leaves
-
-        return leaves[0].value.actions[0][1]
+        return mini_max(root, 0).game_sequence.actions[0][1]
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -173,7 +150,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         alpha = -64
         beta = 64
         depth_count = 0
-        root = Node(value=GameSequence([], gameState, self.evaluationFunction(gameState)))
+        root = Node(game_sequence=GameSequence([], gameState, self.evaluationFunction(gameState)))
         leaves = [root]
 
         while depth_count < self.depth:
@@ -188,8 +165,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                     new_state = current_state.generateSuccessor(agent_index, a)
                     new_actions = gs.actions.copy()
                     new_actions.append((agent_index, a))
-                    leaf = Node(parent=n,
-                                value=GameSequence(new_actions, new_state, self.evaluationFunction(new_state)))
+                    leaf = Node(game_sequence=GameSequence(new_actions, new_state, self.evaluationFunction(new_state)))
                     new_leaves.append(leaf)
 
             leaves = new_leaves
@@ -223,9 +199,9 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                     else:
                         break
 
-                new_leaves.append(Node(parent=n.parent.parent,
-                                       value=GameSequence(target.value.actions.copy(), target.value.final_game_state,
-                                                          target.value.final_point)))
+                new_leaves.append(Node(game_sequence=GameSequence(target.value.actions.copy(),
+                                                                  target.value.final_game_state,
+                                                                  target.value.final_point)))
             leaves = new_leaves
 
         return leaves[0].value.actions[0][1]
@@ -296,7 +272,8 @@ def get_target_index(elements, target):
 
 
 class GameSequence:
-    def __init__(self, actions, final_game_state, final_point, *args, **kwargs) -> None:
+    def __init__(self, actions, final_game_state, final_point, *args,
+                 **kwargs) -> None:
         super().__init__(**kwargs)
         self.actions = actions
         self.final_game_state = final_game_state
@@ -304,7 +281,36 @@ class GameSequence:
 
 
 class Node:
-    def __init__(self, value, parent=None, *args, **kwargs) -> None:
+    def __init__(self, game_sequence, value=None, children=None, alpha=-64, beta=64, *args,
+                 **kwargs) -> None:
         super().__init__(**kwargs)
-        self.parent = parent
+        self.game_sequence = game_sequence
         self.value = value
+        if children is None:
+            children = []
+        self.children = children
+        self.alpha = alpha
+        self.beta = beta
+
+
+def form_tree(root, agent):
+    depth_count = 0
+    leaves = [root]
+
+    while depth_count < agent.depth:
+        new_leaves = []
+        for curr_node in leaves:
+            gs = curr_node.game_sequence
+            current_state = gs.final_game_state
+            agent_index = depth_count % current_state.getNumAgents()
+
+            for a in current_state.getLegalActions(agent_index):
+                new_state = current_state.generateSuccessor(agent_index, a)
+                new_actions = gs.actions.copy()
+                new_actions.append((agent_index, a))
+                new_node = Node(game_sequence=GameSequence(new_actions, new_state,
+                                                           agent.evaluationFunction(new_state)))
+                curr_node.children.append(new_node)
+                new_leaves.append(new_node)
+        leaves = new_leaves
+        depth_count += 1
