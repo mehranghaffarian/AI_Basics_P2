@@ -279,27 +279,21 @@ def betterEvaluationFunction(currentGameState):
     # corners
     corners = currentGameState.getCorners()
     corners_counts = [0] * currentGameState.getNumAgents()
-    max_corners_index = 0
-    min_corners_index = 0
 
     for i in range(currentGameState.getNumAgents()):
         if corners[i] != -1:
             agent_index = corners[i]
             corners_counts[agent_index] += 1
-            if corners_counts[agent_index] < corners_counts[min_corners_index]:
-                min_corners_index = agent_index
-            if corners_counts[agent_index] > corners_counts[max_corners_index]:
-                max_corners_index = agent_index
-    max_corner_count = corners_counts[max_corners_index]
-    min_corner_count = corners_counts[min_corners_index]
+
+    max_corner_count = max(corners_counts)
+    min_corner_count = min(corners_counts)
 
     if max_corner_count + min_corner_count == 0:
         corners_heuristic = 0
     else:
         corners_heuristic = 100 * (max_corner_count - min_corner_count) / (max_corner_count + min_corner_count)
     # stability
-    stability = corners_counts[0] * 3
-    stability += currentGameState.getScore(0)
+    stability = 100 * (currentGameState.getScore(0) - corners_counts[0] * 4)/(currentGameState.getScore(0) + corners_counts[0] * 4)
 
     return parity * -0.2 + mobility * 0.4 + corners_heuristic * 0.3 + stability * 0.5
 
