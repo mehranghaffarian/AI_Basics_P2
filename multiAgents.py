@@ -211,7 +211,16 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        root = Node(game_sequence=GameSequence([], gameState, self.evaluationFunction(gameState)))
+
+        form_tree(root, self)
+
+        def expectimax(curr_root, depth):
+            if len(curr_root.children) == 0:
+                return curr_root
+            return expectimax(random.choice(curr_root.children), depth+1)
+
+        return expectimax(root, 0).game_sequence.actions[0][1]
 
 
 def betterEvaluationFunction(currentGameState):
@@ -236,14 +245,42 @@ def betterEvaluationFunction(currentGameState):
     "*** YOUR CODE HERE ***"
 
     # parity
-
-    # corners
-
+    min_coins = min(currentGameState.getScore())
+    max_coins = max(currentGameState.getScore())
+    parity = 100 * (max_coins - min_coins)/(max_coins + min_coins)
     # mobility
+    max_mobility = max([len(currentGameState.getLegalActions(i)) for i in range(currentGameState.getNumAgents())])
+    min_mobility = min([len(currentGameState.getLegalActions(i)) for i in range(currentGameState.getNumAgents())])
+    if max_mobility + min_mobility == 0:
+       mobility = 0
+    else:
+        mobility = 100 * (max_mobility - min_mobility)/(max_mobility + min_mobility)
+    # corners
+    corners = currentGameState.getCorners()
+    corners_counts = [0] * currentGameState.getNumAgents()
+    max_corners_index = 0
+    min_corners_index = 0
 
+    for i in range(currentGameState.getNumAgents()):
+        if corners[i] != -1:
+            agent_index = corners[i]
+            corners_counts[agent_index] += 1
+            if corners_counts[agent_index] < corners_counts[min_corners_index]:
+                min_corners_index = agent_index
+            if corners_counts[agent_index] > corners_counts[max_corners_index]:
+                max_corners_index = agent_index
+    max_corner_count = corners_counts[max_corners_index]
+    min_corner_count = corners_counts[min_corners_index]
+
+    if max_corner_count + min_corner_count == 0:
+        corners_heuristic = 0
+    else:
+        corners_heuristic = 100 * (max_corner_count - min_corner_count)/(max_corner_count+min_corner_count)
     # stability
+    stability = corners_counts[0] * 3
+    stability += currentGameState.getScore(0)
 
-    util.raiseNotDefined()
+    return parity * -0.2 + mobility * 0.4 + corners_heuristic * 0.3 + stability * 0.5
 
 
 # Abbreviation
